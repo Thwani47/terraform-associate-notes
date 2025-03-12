@@ -122,7 +122,73 @@ JSON values interpretes as expressions are mapped as follows
 
 ## Terraform Resources
 
-[Rerraform Resources](https://developer.hashicorp.com/terraform/language/v1.1.x/resources)
+- Each resource block describes one or more infrastructure objects, such as vnets, compute instances, or higher-level components such as DNS records
+- A `resource` block declares a resources of a specific type with a specific local name. Terraform uses the local name to refer to the resource in the same module. The name means nothing outside the module.
+
+```tf
+resource "aws_instance" "web" {
+    ami           = "ami-abc123"
+    instance_type = "t2.micro"
+}
+```
+
+Here we define an `aws_instance` resource type named `web`. The resource type and name must be unique within a module. i.e, we can't define another `aws_instance` resource type named `web` within the same module
+
+- The resource arguments often depend on the resource type
+- A provider is a plugin for Terraform that offers a collection of resource types
+- Based on the resource type, Terraform can usually determine which provider to use
+- By convention, resource types start with the name of the provider. i.e `aws_instance` is from the `aws` provider
+- Terraform resources can be used with these meta-arguments, which can be used with any resource type to change the behavior of the resources:
+  - `depends_on` - For specifying hidden dependencies
+  - `count` - For creating multiple resource instances according to a count
+  - `for_each` - To create multiple instances according to a map, or a set of strings
+  - `provider` - To select a non-default provider configuration
+  - `lifecycle` - To customize the lifecycle of the resource
+  - `provisioner` - To take extra actions after the resource creation
+- To remove a resource we can simply remove it from our configuration. On the next run of `terraform apply`, the resource will be deleted from our cloud infrastructure.
+- If we want to remove the resource from our configuration, but do not delete it from our cloud infrastrcture, we can remove the `resource` block from our configuration and replace it with a `removed` block
+
+```tf
+removed {
+    from aws_instance.web
+
+    lifecycle = {
+        destroy = false
+    }
+}
+```
+
+The `from` keyword is the address of the resource we want to remove
+The `lifecycle` block is required.  The `destroy` argument determines whether the resource will be destroyed or not. A value of `false` means Terraform will remove the resource from the state without destroying it
+
+- We can use `precondition` and `postcondition` blocks to specify assumptions and guarantees about how the resource operates.
+
+```tf
+resource "aws_instance" "web" {
+    instance_type = "t2.micro"
+    ami           = "ami-abc123"
+
+    lifecycle {
+        precondition {
+            condition     = data.aws_ami.example.architecture == "x86_84"
+            error_message = "The selected AMI must be for the x86_64 architecture."
+        }
+    }
+}
+```
+
+- Some resource types provide a special `timeouts` nested block argument that allows us to customize how long certain operations are allowed to take before being considered to have failed. 
+
+```tf
+resource "aws_db_instance" "db" {
+    // ... 
+    
+    timeouts {
+        create = "60m"
+        delete= "2h"
+    }
+}
+```
 
 ## Terraform Data Sources
 
