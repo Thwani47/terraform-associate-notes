@@ -159,7 +159,7 @@ removed {
 ```
 
 The `from` keyword is the address of the resource we want to remove
-The `lifecycle` block is required.  The `destroy` argument determines whether the resource will be destroyed or not. A value of `false` means Terraform will remove the resource from the state without destroying it
+The `lifecycle` block is required. The `destroy` argument determines whether the resource will be destroyed or not. A value of `false` means Terraform will remove the resource from the state without destroying it
 
 - We can use `precondition` and `postcondition` blocks to specify assumptions and guarantees about how the resource operates.
 
@@ -177,12 +177,12 @@ resource "aws_instance" "web" {
 }
 ```
 
-- Some resource types provide a special `timeouts` nested block argument that allows us to customize how long certain operations are allowed to take before being considered to have failed. 
+- Some resource types provide a special `timeouts` nested block argument that allows us to customize how long certain operations are allowed to take before being considered to have failed.
 
 ```tf
 resource "aws_db_instance" "db" {
-    // ... 
-    
+    // ...
+
     timeouts {
         create = "60m"
         delete= "2h"
@@ -235,28 +235,47 @@ data "aws_ami" "example" {
 
 ## Terraform Providers
 
-[Terraform Providers](https://developer.hashicorp.com/terraform/language/v1.1.x/providers)
+- Terraform relies on plugins called **providers** to interact with cloud providers, SaaS providers, and other APIs.
+- Terraform configurations must declare which providers they require so that Terraform can install and use them.
+- Providers are written in Go, using the Terraform Plugin SDK
+- Provider configurations belong in the root module of a Terraform configuration.
+- A provider configuration is created using a `provider` block
 
-## Terraform Variables and Outputs
+```tf
+provider "google" {
+    project = "acme-app"
+    region  = "us-central1"
+}
+```
 
-[Terraform variables and outputs](https://developer.hashicorp.com/terraform/language/v1.1.x/values)
+- We can use expressions to specify the values of arguments.
+  - These values need to be known before the configuration is applied
+- Terraform defines two meta-arguments that are available for all `provider` blocks:
+  - `alias` for using the same provider with different configurations for different resources
+  - `version` which is no longer recommended
+- To create multiple configuration for a given provider, we can include multiple `provider` blocks with the same provider name, and for all non-default providers, can include the `alias` meta-argument
 
-## Terraform Modules
+```tf
+# the default provider. Resources that begin with 'aws_' will use this provideer
+provider "aws" {
+    region = "us-east-1"
+}
 
-[Terraformo Modules](https://developer.hashicorp.com/terraform/language/v1.1.x/modules)
+# an additional provider for the west coast region; resources can reference this as 'aws.west'
+provider "aws" {
+    alias  = "west"
+    region = "us-west-2"
+}
 
-## Terraform Expressions
+# ...
+resource "aws_instance" "web" {
+    provider = aws.west
 
-[Terraform Expressions](https://developer.hashicorp.com/terraform/language/v1.1.x/expressions)
+    # ...
+}
+```
 
-## Terraform Functions
-
-[Terraform Functions](https://developer.hashicorp.com/terraform/language/v1.1.x/functions)
-
-## Terraform Settings
-
-[Terraform Settings](https://developer.hashicorp.com/terraform/language/v1.1.x/settings)
-
-## Terraform State
-
-[Terraform State](https://developer.hashicorp.com/terraform/language/v1.1.x/state)
+- A provider without an alias argument is the default configuration for that provider.
+- Each provider has two identifiers:
+  - A unique source address
+  - A local name
