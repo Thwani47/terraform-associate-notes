@@ -192,7 +192,46 @@ resource "aws_db_instance" "db" {
 
 ## Terraform Data Sources
 
-[Terraform Data Sources](https://developer.hashicorp.com/terraform/language/v1.1.x/data-sources)
+- Data sources allow Terraform to use information defined outside of Terraform, defined by another separate Terraform configuraiton, or modified by functions.
+- Each provider may offer data sources alongside its set of resource types
+- A data source is accessed via a special kind of resources known as a `data` resource, declared using a `data` block
+
+```tf
+data "aws_ami" "example" {
+    most_recent = true
+
+    owners = ["self"]
+    tags = {
+        Name   = "app-server"
+        Tested = "true"
+    }
+}
+```
+
+This data block requests that Terraform read from a given data source ("aws_ami") and export the result under the given local name ("example")
+
+- The name used must be unique within the module.
+- `resource` blocks (sometimes reffered to as **managed resources**) allow Terraform to create,update, and delete infrastructure objects. `data` blocks allow Terraform to read objects.
+- Terraform reads data resources during the planning phase when possible, but announces in the plan when it must defer reading resources until the apply phase to preserve the order of operations.
+  - If the data resource needs to read an attribute from a managed resource that will be updated, or Terraform cannot predict the value until the apply phase, or if the data resource has custom conditions, then Terraform will defer the reading until the apply phase
+- The behavior of local-only data sources is that their data exists only temporarily during a Terraform operation, and is re-calculated each time a new plan is created.
+- Data resources have the same depenency resolution behavior as managed resources
+- We can use `precondition` and `postcondition` blocks to specify assumptions and guarantees about how the data block operates.
+
+```tf
+data "aws_ami" "example" {
+    id = var.aws_ami.id
+
+    lifecycle {
+        # the AMI ID must refer to an existing AMI that has the tag "nomad-server"
+        condition     = self.tags["Component"] == "nomad-server"
+        error_message = "tags[\"Component\"] must be \"nomad-server\"."
+    }
+}
+```
+
+- Data resources support `count` and `for_each` meta-arguments
+- Data resources support the `provider` meta-argument
 
 ## Terraform Providers
 
