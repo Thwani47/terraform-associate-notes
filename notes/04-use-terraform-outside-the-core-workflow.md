@@ -253,7 +253,7 @@ refers to only the `example` instance in the config, and resolves to `value4`
     - Usage `terraform force-unlock [options] LOCK_ID`
   - We can use `terraform state pull` to read the state from the configured backend
     - This downloads the state from its remote location, and updates the local copy with the contents of the remote state, and outputs the raw format to standard output
-    - We cannot use the command to query Terraform version of the remote state as the output will be formated to a format that's compatible with the local Terraform version before output 
+    - We cannot use the command to query Terraform version of the remote state as the output will be formated to a format that's compatible with the local Terraform version before output
   - We can use the `terraform state push` command to write state files to the configured backend
     - This uploads the local state to teh remote backend
     - Usage `terraform state push [options] PATH`
