@@ -151,7 +151,7 @@ output "instance_ip_addr" {
 ```tf
 output "api_base_url" {
     value = "https://${aws_instance_web.private_dns}:8433/"
-    
+
     precondition {
         condition     = data.aws_ebs_volume.example.encrypted
         error_message = "The server's root volume is not encryped"
@@ -213,3 +213,122 @@ resource "aws_instance" "web" {
     tags = local.common_tags
 }
 ```
+
+## Modules
+
+- Modules are containers for multiple resources that are used together.
+- A module consists of a collection of `.tf` or `.tf.json` files kept together in a directory
+- Modules are the main way to package and reuse resource configurations with Terraform
+- Every Terraform configuration has at least one module, known as the root module.
+- The root module consists of resources defined in the `.tf` files in the main directory
+- A Terraform module can call other modules to include their resources into the configuration
+- A module that has been called by another module is reffered to as the child module
+- We can load modules from the local filesystem or from a public or private registry
+- We can also publish modules for others to use
+- Modules are called from within other modules using `module` blocks
+
+```tf
+module "servers" {
+    source  = "./app-cluster"
+    servers = 5
+}
+```
+
+- The `source` argument is mandatory for all modules
+  - The source is either the path to a local directory containing the module's configuration files or a remote module source that Terraform should download and use
+  - After adding, removing, or modifying module blocks, we must run `terraform init` to allow Terraform to adjust to the changes
+  - `terraform init` will not upgrade previously downloaded modules. We need to pass in the `-upgrade` option to `terraform init` to download newer versions of modules
+- The `version` argument is mandatory for all modules from a registry
+
+  ```tf
+  module "consul" {
+      source  = "hashicorp/consul/aws"
+      version = "0.0.5"
+
+      servers = 4
+  }
+  ```
+
+  - if no versions meet the specified version, Terraform will download the latest available version that meets the constraint
+
+- The module blocks also support these meta-arguments:
+  - `count` - creates multiple instances of a module from a single `module` block
+  - `for_each` - creates multiple instances of a module from a single `module` block
+  - `providers` - passes provider configurations to a chile module
+  - `depends_on` - creates explicit dependencies between the entire module and the listed targets
+- Child modules can declare output values to enable the calling modules access to some resource attributes
+- To remove a module from Terraform we can simply remove the module block from the configuration
+- If we want to remove the module but not destroy the resources created under that module, we can add the module in a `removed` block and remove the module from the configuration
+
+```tf
+removed {
+    from  = module.example
+
+    lifecycle {
+        destroy = false
+    }
+}
+```
+
+- The Terraform module installer supports installation from a number of different module source types
+
+  - Local paths
+
+    ```tf
+    module "consul" {
+    source = "./consul"
+    }
+    ```
+
+    - A local path must begin with either `./` or `../`
+
+  - Terraform Registry
+
+    ```tf
+    module "consul" {
+        source  = "hashicorp/consul/aws"
+        version = "0.1.0"
+    }
+
+    module "another-consul" {
+        source  = "app.terraform.io/example-corp/k8s-cluster/azurerm"
+        version = "1.1.0"
+    }
+    ```
+
+  - GitHub
+
+    ```tf
+    module "consul" {
+        source = "github.com/hashicorp/example"
+    }
+
+    module "consul" {
+        source = "git@github.com:hashicorp/example.git"
+    }
+    ```
+
+  - BitBucket
+
+    ```tf
+    module "consul" {
+        source = "bitbucket.org/hashicorp/terraform-consul-aws"
+    }
+    ```
+
+  - Generic Git, Mercurial repositories
+  - HTTP URLs
+  - S3 Buckets
+  - GCS Buckets
+  - Modules in package sub-directories
+
+- If the child module does not declare any configuration aliases, the child module will inherit all default non-alised providers
+- The standard module structure is as follows
+  - Root module
+  - README
+  - LICENSE
+  - main.tf, variables.tf, outputs.tf
+  - Variables and outputs should have descriptions
+  - Nested modules should exist under the `/modules` sub-folder
+    - Any nested module with a README is considered available for external usage. If the README does not exist, it is considered to be for internal usage only
+  - Examples - Usage examples should be in the `./examples` sub-folder. Each example can have a README explaining the goal of the example
